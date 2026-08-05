@@ -23,3 +23,14 @@ schema_config:
       index:
         prefix: index_
         period: 24h
+        # ==========================================
+# RETENTION POLICY CONFIGURATION
+# ==========================================
+limits_config:
+  retention_period: 168h    # 7 days (7 * 24 hours)
+
+compactor:
+  working_directory: /tmp/loki/compactor
+  compaction_interval: 10m
+  retention_enabled: true   # Activates automated log purging
+  retention_delete_delay: 2h
