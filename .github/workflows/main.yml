@@ -106,7 +106,7 @@ jobs:
             git checkout main
             git pull origin main
 
-            sudo docker compose up -d --build
+            sudo docker compose up -d --build --force-recreate
 
   # ==========================================
   # STAGE 2: MANUAL APPROVAL & DEPLOY TO PROD
@@ -209,4 +209,4 @@ jobs:
             git checkout main
             git pull origin main
 
-            sudo docker compose up -d --build
+            sudo docker compose up -d --build --force-recreate
