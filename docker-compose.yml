@@ -24,6 +24,14 @@ services:
         loki-batch-size: "400"
         mode: "non-blocking"
         max-buffer-size: "4m"
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
 
   # ==========================================
   # 2. DOCKER STATS EXPORTER
@@ -38,6 +46,14 @@ services:
       - "9487:9487"
     networks:
       - app-net
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 64M
+        reservations:
+          cpus: '0.05'
+          memory: 16M
 
   # ==========================================
   # 3. NODE EXPORTER
@@ -58,6 +74,14 @@ services:
       - "9100:9100"
     networks:
       - app-net
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 64M
+        reservations:
+          cpus: '0.05'
+          memory: 16M
 
   # ==========================================
   # 4. PROMETHEUS
@@ -74,11 +98,20 @@ services:
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=7d'   # <--- 7-day retention for Prometheus
     depends_on:
       - docker-stats
       - node-exporter
     networks:
       - app-net
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+        reservations:
+          cpus: '0.10'
+          memory: 128M
 
   # ==========================================
   # 5. GRAFANA
@@ -101,6 +134,14 @@ services:
       - loki
     networks:
       - app-net
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 256M
+        reservations:
+          cpus: '0.10'
+          memory: 64M
 
   # ==========================================
   # 6. LOKI
@@ -119,8 +160,10 @@ services:
     deploy:
       resources:
         limits:
+          cpus: '0.50'
           memory: 350M
         reservations:
+          cpus: '0.10'
           memory: 100M
 
 networks:
@@ -138,8 +181,8 @@ configs:
   prometheus_config:
     content: |
       global:
-        scrape_interval: 5s
-        evaluation_interval: 5s
+        scrape_interval: 15s       # <--- Updated to 15s
+        evaluation_interval: 15s   # <--- Updated to 15s
 
       scrape_configs:
         - job_name: 'docker-stats'
