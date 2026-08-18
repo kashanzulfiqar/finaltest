@@ -25,6 +25,7 @@ module "prod_infra" {
   instance_type = "t3.micro"      # Larger instance for prod
   ami_id        = "ami-0b6d9d3d33ba97d99" # Replace with valid Ubuntu/Amazon Linux AMI in us-east-1
   key_name      = "keyforec2"
+  backend_domain_name = "stage-api.daftarpro.com" 
 }
 
 output "prod_ec2_ip" {
