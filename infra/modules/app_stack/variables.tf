@@ -21,3 +21,7 @@ variable "key_name" {
   type        = string
   description = "ec2 security key"
 }
+variable "backend_domain_name" {
+  type        = string
+  description = "Domain name for the backend API (e.g., stage-api.daftarpro.com)"
+}
