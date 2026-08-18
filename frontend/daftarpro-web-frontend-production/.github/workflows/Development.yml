@@ -1,0 +1,67 @@
+name: Deploy Frontend to EC2
+
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout Code
+      - name: Checkout Code
+        uses: actions/checkout@v3
+        with:
+          ref: dev
+
+      # Step 2: Configure SSH
+      - name: Configure SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY_FRONTEND }}
+          SSH_HOST: ${{ secrets.EC2_HOST }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/frontend_deploy_key
+          chmod 600 ~/.ssh/frontend_deploy_key
+          ssh-keyscan -H $SSH_HOST >> ~/.ssh/known_hosts
+
+      # Step 3: Deploy Frontend
+      - name: Deploy Frontend to EC2
+        env:
+          SSH_HOST: ${{ secrets.EC2_HOST }}
+        run: |
+          ssh -i ~/.ssh/frontend_deploy_key deploy@$SSH_HOST '
+            set -e
+            echo "Navigating to frontend directory..."
+            cd /var/www/daftarpro-frontend/daftarpro-web-frontend
+
+            echo "Starting SSH agent..."
+            eval "$(ssh-agent -s)"
+
+            echo "Adding SSH key..."
+            ssh-add ~/.ssh/frontend_deploy_key
+
+            echo "Pulling latest code from dev branch..."
+            git checkout dev
+            git pull origin dev
+
+            echo "Cleaning up old dependencies and build files..."
+            rm -rf node_modules dist
+
+            echo "Bumping node version"
+            nvm use 22
+
+            
+            echo "Installing dependencies..."
+            yarn install --frozen-lockfile || { echo "Dependency installation failed"; exit 1; }
+
+            echo "Building project..."
+            yarn build || { echo "Build failed"; exit 1; }
+
+            echo "Restarting nginx server..."
+            sudo systemctl restart nginx || { echo "Nginx restart failed"; exit 1; }
+
+            echo "Deployment completed successfully!"
+          '
