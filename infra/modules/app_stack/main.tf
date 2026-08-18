@@ -25,28 +25,35 @@ resource "aws_cloudfront_distribution" "cdn" {
   enabled             = true
   is_ipv6_enabled     = true
   default_root_object = "index.html"
-depends_on = [
+
+  depends_on = [
     aws_cloudfront_origin_access_control.oac
   ]
+
+  # S3 Frontend Origin
   origin {
     domain_name              = aws_s3_bucket.frontend.bucket_regional_domain_name
     origin_id                = "S3-${aws_s3_bucket.frontend.id}"
     origin_access_control_id = aws_cloudfront_origin_access_control.oac.id
   }
+
+  # HTTPS Backend Origin
   origin {
-    domain_name = aws_eip.backend_eip.public_dns
-    origin_id   = "EC2-${aws_instance.backend.id}"
+    domain_name = "stage-api.daftarpro.com"
+    origin_id   = "Backend-API"
 
     custom_origin_config {
       http_port              = 80
       https_port             = 443
-      origin_protocol_policy = "http-only"
+      origin_protocol_policy = "https-only"
       origin_ssl_protocols   = ["TLSv1.2"]
     }
   }
- ordered_cache_behavior {
+
+  # API Cache Behavior
+  ordered_cache_behavior {
     path_pattern     = "/api/*"
-    target_origin_id = "EC2-${aws_instance.backend.id}"
+    target_origin_id = "Backend-API"
 
     allowed_methods = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
     cached_methods  = ["GET", "HEAD"]
@@ -56,10 +63,12 @@ depends_on = [
     # AWS Managed CachingDisabled Policy ID
     cache_policy_id = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
 
-    # AWS Managed AllViewer Policy ID (Forwards headers/query params to EC2)
-    origin_request_policy_id = "216adef6-5c7f-47e4-b989-5492eafa07d3" 
+    # AWS Managed AllViewerExceptHostHeader Policy ID
+    # Forwards headers/query params/cookies while setting Host header to stage-api.daftarpro.com
+    origin_request_policy_id = "b6805402-2213-4780-8307-3b32b4fe742d" 
   }
 
+  # Frontend Default Cache Behavior
   default_cache_behavior {
     allowed_methods  = ["GET", "HEAD"]
     cached_methods   = ["GET", "HEAD"]
@@ -112,7 +121,6 @@ resource "aws_s3_bucket_policy" "allow_cloudfront" {
   })
 }
 
-
 # --- 5. EC2 Instance for Backend ---
 resource "aws_security_group" "backend_sg" {
   name        = "backend-sg-${var.environment}"
@@ -122,7 +130,7 @@ resource "aws_security_group" "backend_sg" {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"] # Restrict to your IP in real production
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   ingress {
@@ -131,12 +139,21 @@ resource "aws_security_group" "backend_sg" {
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
+
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
   ingress {
     from_port   = 3000
     to_port     = 3000
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
+
   egress {
     from_port   = 0
     to_port     = 0
@@ -156,6 +173,7 @@ resource "aws_instance" "backend" {
     Environment = var.environment
   }
 }
+
 resource "aws_eip" "backend_eip" {
   instance = aws_instance.backend.id
   domain   = "vpc"
@@ -165,6 +183,7 @@ resource "aws_eip" "backend_eip" {
     Environment = var.environment
   }
 }
+
 resource "terraform_data" "invalidate_cache" {
   triggers_replace = [
     aws_cloudfront_distribution.cdn.id
