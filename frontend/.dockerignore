@@ -1,9 +1,0 @@
-node_modules
-dist
-.git
-.gitignore
-README.md
-Procfile
-book.json
-webpack.config.js.backup*
-webpack.config.js.before_optimization
