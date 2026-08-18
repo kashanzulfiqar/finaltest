@@ -1,0 +1,348 @@
+/**
+ * Signin Firebase
+ */
+
+import React, { useEffect, useState } from "react";
+import { Helmet } from "react-helmet";
+import Offcanvas from "../../../Entryfile/offcanvance";
+import favicon from "../../../files/Icons/DaftarProIcon.svg";
+import { Link, useNavigate } from "react-router-dom";
+import Company from "./Company";
+import Leaves from "./Leaves";
+import Roles from "./Roles";
+import Departments from "./Departments";
+import Designation from "./Designation";
+import Shifts from "./Shifts";
+import TaxSlabs from "./TaxSlabs";
+import { useSelector } from "react-redux";
+import InvoiceTaxes from "./InvoiceTaxes";
+import InvoiceTags from "./InvoiceTags";
+import InvoiceCounter from "./InvoiceCounter";
+import BankDetails from "./BankDetails";
+import ExpenseCategory from "./ExpenseCategory";
+import { useTranslation } from "react-i18next";
+import WokringDays from "./WorkingDays";
+
+const Settings = ({test}) => {
+
+  const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
+
+  const user_state = useSelector((state) => state.user.loginvalue);
+  const role = user_state?.user?.role
+  const permissions = useSelector((state) => state?.permissionsSlice?.data);
+
+  let active = sessionStorage.getItem("active_setting");
+
+
+  const [editModal, setEditModal] = useState('')
+  const [showComponent, setShowComponent] = useState(active ? active : 'Company Settings')
+
+  console.log('logi====', test);
+
+  useEffect(() => {
+    if ($(".select").length > 0) {
+      $(".select").select2({
+        minimumResultsForSearch: -1,
+        width: "100%",
+      });
+    }
+  });
+
+  useEffect(() => {
+    if(role === 'admin' || permissions?.companyManagement) {
+
+    }else{
+      navigate('/restricted', { state: { unAuthorize: true}})
+    }
+  }, [])
+  
+
+
+useEffect(() => {
+  window.scrollTo(0, 0);
+  // sessionStorage.clear();
+  sessionStorage.setItem(`active_setting`, `${showComponent}`)
+}, [showComponent])
+
+
+  return (
+    <div>
+      <div className="page-wrapper">
+        <Helmet>
+          <title>{
+          showComponent==="Company Settings" 
+          ? t('settings.companySettings.companySettings') 
+          : showComponent==="Leave Settings" 
+          ? t('settings.leaveSettings')
+          : showComponent==="Roles" 
+          ? t('settings.roles')
+          : showComponent==="Departments" 
+          ? t('settings.departments')
+          : showComponent==="Designations" 
+          ? t('settings.designations')
+          : showComponent==="Shifts" 
+          ? t('settings.shifts')
+          : showComponent==="Tax Slabs" 
+          ? t('settings.taxSlabs')
+          : showComponent==="Bank Details" 
+          ? t('settings.bankDetails')
+          : showComponent==="Invoice Tax Slabs" 
+          ? t('settings.invoiceTaxSlabs')
+          : showComponent==="Invoice Tags" 
+          ? t('settings.invoiceTags')
+          : showComponent==="Invoice Counter" 
+          ? t('settings.invoiceCounter')
+          : showComponent==="Expense Categories" 
+          ? t('settings.expenseCategories')
+          : showComponent==="Working Days" 
+          ? 'Working Days'
+          : showComponent
+          } - {t('header.daftarPro')}</title>
+          <meta name="description" content="Login page" />
+          <link rel="icon" type="image/x-icon" href={favicon} />
+        </Helmet>
+        {/* Page Content */}
+        <div className="content container-fluid">
+          <div className="page-header">
+            <div className="row">
+              <div className="col-12">
+                <h4 className="page-title">{t('sideBar.settings')}</h4>
+                
+              </div>
+              <div className="col-9 m-b-0 text-right"></div>
+            </div>
+          </div>
+
+          {/* new */}
+          <div className="row">
+             <div className="col-sm-4 col-md-4 col-lg-4 col-xl-3" style={{paddingBottom: '20px'}}>
+               {/* <a href="#" className="btn btn-primary btn-block w-100" data-bs-toggle="modal" data-bs-target="#add_role"><i className="fa fa-plus" /> Add Roles</a> */}
+               <div className="roles-menu" style={{margin: '0px'}}>
+                 <ul>
+                    <li className={showComponent === 'Company Settings' ? 'active' : ''}>
+                      <a href="javascript:void(0)" onClick={() => {setShowComponent('Company Settings') }}>
+                        <i className="fa fa-fw fa-info-circle" style={{ marginLeft: i18n.dir()==="rtl" ? '8px' : undefined, marginRight: i18n.dir()==="rtl" ? undefined : '8px'}}></i>
+                        {t('settings.companySettings.companySettings')}
+                      </a>
+                   </li>
+                   <li className={showComponent === 'Working Days' ? 'active' : ''}>
+                      <a href="javascript:void(0)" onClick={() => {setShowComponent('Working Days') }}>
+                        <i className="fa fa-fw fa-calendar" style={{ marginLeft: i18n.dir()==="rtl" ? '8px' : undefined, marginRight: i18n.dir()==="rtl" ? undefined : '8px'}}></i>
+                        Working Days
+                      </a>
+                   </li>
+                   <li className={showComponent === 'Leave Settings' ? 'active' : ''}>
+                      <a href="javascript:void(0)" onClick={() => {setShowComponent('Leave Settings') }}>
+                        <i className="fa fa-fw fa-warning" style={{ marginLeft: i18n.dir()==="rtl" ? '8px' : undefined, marginRight: i18n.dir()==="rtl" ? undefined : '8px'}}></i>
+                        {t('settings.leaveSettings')}
+                      </a>
+                   </li>
+                   <li className={showComponent === 'Roles' ? 'active' : ''}>
+                      <a href="javascript:void(0)" onClick={() => {setShowComponent('Roles') }}>
+                        <i className="fa fa-fw fa-list-alt" style={{ marginLeft: i18n.dir()==="rtl" ? '8px' : undefined, marginRight: i18n.dir()==="rtl" ? undefined : '8px'}}></i>
+                        {t('settings.roles')}
+                      </a>
+                   </li>
+                   <li className={showComponent === 'Departments' ? 'active' : ''}>
+                      <a href="javascript:void(0)" onClick={() => {setShowComponent('Departments') }}>
+                        <i className="fa fa-fw fa-sitemap" style={{ marginLeft: i18n.dir()==="rtl" ? '8px' : undefined, marginRight: i18n.dir()==="rtl" ? undefined : '8px'}}></i>
+                        {t('settings.departments')}
+                      </a>
+                   </li>
+                   <li className={showComponent === 'Designations' ? 'active' : ''}>
+                      <a href="javascript:void(0)" onClick={() => {setShowComponent('Designations') }}>
+                        <i className="fa fa-fw fa-users" style={{ marginLeft: i18n.dir()==="rtl" ? '8px' : undefined, marginRight: i18n.dir()==="rtl" ? undefined : '8px'}}></i>
+                        {t('settings.designations')}
+                      </a>
+                   </li>
+                   <li className={showComponent === 'Shifts' ? 'active' : ''}>
+                      <a href="javascript:void(0)" onClick={() => {setShowComponent('Shifts') }}>
+                        <i className="fa fa-fw fa-clock-o" style={{ marginLeft: i18n.dir()==="rtl" ? '8px' : undefined, marginRight: i18n.dir()==="rtl" ? undefined : '8px'}}></i>
+                        {t('settings.shifts')}
+                      </a>
+                   </li>
+                   <li className={showComponent === 'Tax Slabs' ? 'active' : ''}>
+                      <a href="javascript:void(0)" onClick={() => {setShowComponent('Tax Slabs') }}>
+                        <i className="fa fa-fw fa-money" style={{ marginLeft: i18n.dir()==="rtl" ? '8px' : undefined, marginRight: i18n.dir()==="rtl" ? undefined : '8px'}}></i>
+                        {t('settings.taxSlabs')}
+                      </a>
+                   </li>
+                   <li className={showComponent === 'Bank Details' ? 'active' : ''}>
+                      <a href="javascript:void(0)" onClick={() => {setShowComponent('Bank Details') }}>
+                        <i className="fa fa-fw fa-bank" style={{ marginLeft: i18n.dir()==="rtl" ? '8px' : undefined, marginRight: i18n.dir()==="rtl" ? undefined : '8px'}}></i>
+                        {t('settings.bankDetails')}
+                      </a>
+                   </li>
+                   <li className={showComponent === 'Invoice Tax Slabs' ? 'active' : ''}>
+                      <a href="javascript:void(0)" onClick={() => {setShowComponent('Invoice Tax Slabs') }}>
+                        <i className="fa fa-fw fa-money" style={{ marginLeft: i18n.dir()==="rtl" ? '8px' : undefined, marginRight: i18n.dir()==="rtl" ? undefined : '8px'}}></i>
+                        {t('settings.invoiceTaxSlabs')}
+                      </a>
+                   </li>
+                   <li className={showComponent === 'Invoice Tags' ? 'active' : ''}>
+                      <a href="javascript:void(0)" onClick={() => {setShowComponent('Invoice Tags') }}>
+                        <i className="fa fa-fw fa-tags" style={{ marginLeft: i18n.dir()==="rtl" ? '8px' : undefined, marginRight: i18n.dir()==="rtl" ? undefined : '8px'}}></i>
+                        {t('settings.invoiceTags')}
+                      </a>
+                   </li>
+                   <li className={showComponent === 'Invoice Counter' ? 'active' : ''}>
+                      <a href="javascript:void(0)" onClick={() => {setShowComponent('Invoice Counter') }}>
+                        <i className="fa fa-fw fa-money" style={{ marginLeft: i18n.dir()==="rtl" ? '8px' : undefined, marginRight: i18n.dir()==="rtl" ? undefined : '8px'}}></i>
+                        {t('settings.invoiceCounter')}
+                      </a>
+                   </li>
+                   <li className={showComponent === 'Expense Categories' ? 'active' : ''}>
+                      <a href="javascript:void(0)" onClick={() => {setShowComponent('Expense Categories') }}>
+                        <i className="fa fa-fw fa-sitemap" style={{ marginLeft: i18n.dir()==="rtl" ? '8px' : undefined, marginRight: i18n.dir()==="rtl" ? undefined : '8px'}}></i>
+                        {t('settings.expenseCategories')}
+                      </a>
+                   </li>
+                   {/* <li className="">
+                     <a href="#">Administrator
+                       <span className="role-action">
+                         <span className="action-circle large" data-bs-toggle="modal" data-bs-target="#edit_role">
+                           <i className="material-icons" onClick={() => setEditModal('hello')}>edit</i>
+                         </span>
+                         <span className="action-circle large delete-btn" data-bs-toggle="modal" data-bs-target="#delete_role">
+                           <i className="material-icons">delete</i>
+                         </span>
+                       </span>
+                     </a>
+                   </li>
+                   <li>
+                     <a href="#">CEO
+                       <span className="role-action">
+                         <span className="action-circle large" data-bs-toggle="modal" data-bs-target="#edit_role">
+                           <i className="material-icons">edit</i>
+                         </span>
+                         <span className="action-circle large delete-btn" data-bs-toggle="modal" data-bs-target="#delete_role">
+                           <i className="material-icons">delete</i>
+                         </span>
+                       </span>
+                     </a>
+                   </li>
+                   <li>
+                     <a href="">Manager
+                       <span className="role-action">
+                         <span className="action-circle large" data-bs-toggle="modal" data-bs-target="#edit_role">
+                           <i className="material-icons">edit</i>
+                         </span>
+                         <span className="action-circle large delete-btn" data-bs-toggle="modal" data-bs-target="#delete_role">
+                           <i className="material-icons">delete</i>
+                         </span>
+                       </span>
+                     </a>
+                   </li> */}
+                 </ul>
+               </div>
+             </div>
+             <div className="cardStyle col-sm-8 col-md-8 col-lg-8 col-xl-9">
+              {
+                showComponent === 'Company Settings' ? <Company /> :
+                showComponent === 'Leave Settings' ? <Leaves /> :
+                showComponent === 'Roles' ? <Roles /> :
+                showComponent === 'Departments' ? <Departments /> :
+                showComponent === 'Designations' ? <Designation /> :
+                showComponent === 'Shifts' ? <Shifts /> : 
+                showComponent === 'Tax Slabs' ? <TaxSlabs /> :
+                showComponent === 'Invoice Tax Slabs' ? <InvoiceTaxes /> :
+                showComponent === 'Invoice Tags' ? <InvoiceTags /> : 
+                showComponent === 'Invoice Counter' ? <InvoiceCounter /> : 
+                showComponent === 'Bank Details' ? <BankDetails /> : 
+                showComponent === 'Expense Categories' ? <ExpenseCategory /> : 
+                <WokringDays />
+              }
+             </div>
+           </div>
+
+           {/* Add Role Modal */}
+         <div id="add_role" className="modal custom-modal fade" role="dialog">
+           <div className="modal-dialog modal-dialog-centered" role="document">
+             <div className="modal-content">
+               <div className="modal-header">
+                 <h5 className="modal-title">Add Role</h5>
+                 <button type="button" className="close" data-bs-dismiss="modal" aria-label="Close">
+                   <span aria-hidden="true">×</span>
+                 </button>
+               </div>
+               <div className="modal-body">
+                 <form>
+                   <div className="form-group">
+                     <label>Role Name <span className="text-danger">*</span></label>
+                     <input className="form-control" type="text" />
+                   </div>
+                   <div className="submit-section">
+                     <button className="btn btn-primary submit-btn">Submit</button>
+                   </div>
+                 </form>
+               </div>
+             </div>
+           </div>
+         </div>
+         {/* /Add Role Modal */}
+         {/* Edit Role Modal */}
+         <div id="edit_role" className="modal custom-modal fade" role="dialog">
+           <div className="modal-dialog modal-dialog-centered" role="document">
+             <div className="modal-content modal-md">
+               <div className="modal-header">
+                 <h5 className="modal-title">Edit Role {editModal}</h5>
+                 <button type="button" className="close" data-bs-dismiss="modal" aria-label="Close">
+                   <span aria-hidden="true">×</span>
+                 </button>
+               </div>
+               <div className="modal-body">
+                 <form>
+                   <div className="form-group">
+                     <label>Role Name <span className="text-danger">*</span></label>
+                     <input
+                        className="form-control"
+                        defaultValue={editModal ? editModal : ''}
+                        type="text"
+                      />
+                   </div>
+                   <div className="submit-section">
+                     <button className="btn btn-primary submit-btn">Save</button>
+                   </div>
+                 </form>
+               </div>
+             </div>
+           </div>
+         </div>
+         {/* /Edit Role Modal */}
+         {/* Delete Role Modal */}
+         <div className="modal custom-modal fade" id="delete_role" role="dialog">
+           <div className="modal-dialog modal-dialog-centered">
+             <div className="modal-content">
+               <div className="modal-body">
+                 <div className="form-header">
+                   <h3>Delete Role</h3>
+                   <p>Are you sure want to delete?</p>
+                 </div>
+                 <div className="modal-btn delete-action">
+                   <div className="row">
+                     <div className="col-6">
+                       <a href="" className="btn btn-primary continue-btn">Delete</a>
+                     </div>
+                     <div className="col-6">
+                       <a href="" data-bs-dismiss="modal" className="btn btn-primary cancel-btn">Cancel</a>
+                     </div>
+                   </div>
+                 </div>
+               </div>
+             </div>
+           </div>
+         </div>
+
+          
+
+
+        </div>
+        {/* /Page Content */}
+      </div>
+      <Offcanvas />
+    </div>
+  );
+};
+
+export default Settings;

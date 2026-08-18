@@ -1,0 +1,1150 @@
+import React, { useEffect, useState } from "react";
+import { Helmet } from "react-helmet";
+import { Link, useNavigate } from "react-router-dom";
+import {
+  DatePicker,
+  Form,
+  Input,
+  Pagination,
+  Select,
+  Table,
+  Spin,
+  Empty,
+  Button,
+  message,
+  InputNumber,
+} from "antd";
+import "antd/dist/antd.css";
+import { itemRender, onShowSizeChange } from "../../paginationfunction";
+import "../../antdstyle.css";
+import Offcanvas from "../../../Entryfile/offcanvance";
+import { useSelector } from "react-redux";
+import Modal from "@mui/material/Modal";
+import { LoadingOutlined } from "@ant-design/icons";
+import EmptyTable from "../../../files/Icons/EmptyTable.svg";
+import { apiServices } from "../../../Services/apiServices";
+import {
+  BarChart,
+  Bar,
+  Cell,
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ComposedChart,
+} from "recharts";
+import { useTranslation } from "react-i18next";
+
+const ProfitLoss = () => {
+  const nav = useNavigate();
+  const { t, i18n } = useTranslation();
+  const moment = require("moment");
+  const [form] = Form.useForm();
+  const [formadd] = Form.useForm();
+  const [formedit] = Form.useForm();
+  const [formyear] = Form.useForm();
+
+  const user_state = useSelector((state) => state.user.loginvalue);
+  const permissions = useSelector((state) => state?.permissionsSlice?.data);
+  const role = user_state?.user?.role;
+
+  const [allProfitLoss, setAllProfitLoss] = useState([]);
+  const [allGraphsData, setAllGraphsData] = useState([]);
+  const [graphData, setGraphData] = useState({});
+  const [allYears, setAllYears] = useState([]);
+  const [tableLoader, setTableLoader] = useState(true);
+  const [graphLoader, setGraphLoader] = useState(true);
+  const [deleteLoader, setDeleteLoader] = useState(false);
+  const [loader, setLoader] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState(null);
+  const [selectedYear, setSelectedYear] = useState(null);
+  const [pageSize, setPageSize] = useState(20);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [paginationDetail, setPaginationDetail] = useState();
+  const [filterValues, setFilterValues] = useState();
+  const [open, setOpen] = useState({
+    isAddOpen: false,
+    isEditOpen: false,
+    isDelOpen: false,
+    data: "",
+  });
+
+  const getYearsTillNow = (startYear) => {
+    const currentYear = new Date().getFullYear();
+    const years = [];
+    for (let year = currentYear; year >= startYear; year--) {
+      years.push(year);
+    }
+    return years;
+  };
+
+  useEffect(() => {
+    if (role === "admin" || permissions?.managePayrolls) {
+      getAllProfitLoss().then(() => {
+        getAllGraphData();
+      });
+      setAllYears(getYearsTillNow(2000));
+      
+    } else {
+      nav(
+        `${
+          role === "client"
+            ? "/client/client-profile"
+            : role === "focalperson"
+            ? `/client/focal-profile`
+            : role === "admin"
+            ? `/main/dashboard`
+            : `/employee/dashboard`
+        }`
+      );
+    }
+  }, []);
+
+  const getAllProfitLoss = (values, current_page, page_size) => {
+    const currentYear = new Date().getFullYear();
+    console.log("values",values)
+    setTableLoader(true);
+    return apiServices(
+      "GET",
+      `profit-loss?year=${values ? values.year : currentYear}&page=${
+        current_page ? current_page : currentPage ? currentPage : 1
+      }&limit=${page_size ? page_size : pageSize ? pageSize : 20}`,
+      null,
+      user_state
+    )
+      .then((res) => {
+        if (res?.data?.success === true) {
+          const sortedDocs = res?.data?.profitLoss?.docs.sort((a, b) => {
+            return b.month - a.month;
+          });
+  
+          setAllProfitLoss(sortedDocs);
+          setPaginationDetail(res?.data?.profitLoss);
+          setTableLoader(false);
+        }
+      })
+      .catch((err) => {
+        setTableLoader(false);
+        message.error(
+          `${
+            err?.response?.data?.msg
+              ? err?.response?.data?.msg
+              : err?.response?.data?.validation?.body?.message
+              ? err?.response?.data?.validation?.body?.message
+              : t('finance.Profit&loss.getAllProfitLossError')
+          }!`
+        );
+      });
+  };
+
+  const getAllGraphData = (year) => {
+    const currentYear = new Date().getFullYear();
+    setGraphLoader(true);
+    apiServices("GET", `profit-loss/graph?year=${year ? year : currentYear}`, null, user_state)
+      .then((res) => {
+        if (res?.data?.success === true) {
+          const all_years = res?.data?.profitLoss
+            ?.map((item) => item?.year)
+            ?.sort((a, b) => b.localeCompare(a));
+          if (year) {
+            const recent_year =
+              res?.data?.profitLoss?.length > 0
+                ? res?.data?.profitLoss?.filter((item) => item?.year === year)
+                    .length > 0
+                  ? res?.data?.profitLoss?.find((item) => item?.year === year)
+                  : res?.data?.profitLoss?.reduce((prev, current) =>
+                      prev.year > current.year ? prev : current
+                    )
+                : {};
+            setGraphData(recent_year);
+            formyear.setFieldsValue({ years: year ? year : currentYear });
+          } else {
+            const recent_year =
+              res?.data?.profitLoss?.length > 0
+                ? res?.data?.profitLoss?.reduce((prev, current) =>
+                    prev.year > current.year ? prev : current
+                  )
+                : {};
+            setGraphData(recent_year);
+            formyear.setFieldsValue({ years: year ? year : currentYear });
+          }
+          setAllGraphsData(res?.data?.profitLoss);
+          //setAllYears(all_years);
+          setGraphLoader(false);
+
+          // const all_years = res?.data?.profitLoss?.map((item => item?.year)).sort((a, b) => b.localeCompare(a));
+          // const recent_year = res?.data?.profitLoss?.length > 0 ? res?.data?.profitLoss.reduce((prev, current) =>
+          //   prev.year > current.year ? prev : current
+          // ) : {};
+          // setAllGraphsData(res?.data?.profitLoss)
+          // setGraphData(recent_year)
+          // setAllYears(all_years)
+          // formyear.setFieldsValue({years: recent_year?.year})
+          // setGraphLoader(false);
+        }
+      })
+      .catch((err) => {
+        setGraphLoader(false);
+        message.error(
+          `${
+            err?.response?.data?.msg
+              ? err?.response?.data?.msg
+              : err?.response?.data?.validation?.body?.message
+              ? err?.response?.data?.validation?.body?.message
+              : t('finance.Profit&loss.getProfitLossGraphDataError')
+          }!`
+        );
+      });
+
+    // const all_years = graphD?.map((item => item?.year)).sort((a, b) => b?.localeCompare(a));
+    // const recent_year = graphD?.length > 0 ? graphD?.reduce((prev, current) =>
+    //   prev?.year > current?.year ? prev : current
+    // ) : {}
+    // setGraphData(recent_year)
+    // setAllGraphsData(graphD)
+    // setAllYears(all_years)
+    // formyear.setFieldsValue({years: recent_year?.year})
+    // setGraphLoader(false)
+  };
+
+  const onFilterFinish = (values) => {
+    const formatted_data = {
+      month: values?.month ? moment(values?.month).format("M") : "",
+      year: values?.year ? moment(values?.year).format("YYYY") : "",
+    };
+    if (formatted_data?.year || formatted_data?.month) {
+      getAllProfitLoss(formatted_data, 1, pageSize);
+      setFilterValues(formatted_data);
+      setCurrentPage(1);
+    }
+  };
+
+  const onFinishAdd = (values) => {
+    const formatted_data = {
+      month: values?.month ? moment(values?.month).format("M") : "",
+      year: values?.year ? moment(values?.year).format("YYYY") : "",
+    };
+
+    setLoader(true);
+    apiServices("POST", "profit-loss", formatted_data, user_state)
+      .then((res) => {
+        if (res?.data?.success === true) {
+          getAllProfitLoss(filterValues, currentPage, pageSize);
+          let sel_year = graphData?.year;
+          getAllGraphData(sel_year);
+          handleClose();
+          message.success(t('finance.Profit&loss.recordGeneratedSuccessfully'));
+          setLoader(false);
+        }
+      })
+      .catch((err) => {
+        setLoader(false);
+        // console.log(err);
+        message.error(
+          `${
+            err?.response?.data?.msg
+              ? err?.response?.data?.msg
+              : err?.response?.data?.validation?.body?.message
+              ? err?.response?.data?.validation?.body?.message
+              : t('finance.Profit&loss.generateProfitLossError')
+          }`
+        );
+      });
+  };
+
+  // const onFinishUpdate = (values, open_data) => {
+  //   let formatted_data = {
+  //     ...values,
+  //     _id: open_data?._id,
+  //     paidAmount: values?.paidAmount ? `${values?.paidAmount}` : '',
+  //     paymentDate: values?.paymentDate ? moment(values?.paymentDate).format('YYYY-MM-DD') : '',
+  //     remainingAmount: `${(+open_data?.totalAmount - values?.paidAmount)?.toFixed(2)}`
+  //   }
+  //   console.log(formatted_data);
+
+  //   setLoader(true)
+  //   apiServices("PUT", "invoices", formatted_data, user_state)
+  //   .then((res) => {
+  //     if (res?.data?.success === true) {
+  //       setAllInvoices(
+  //         allInvoices.map((invoice) => {
+  //           if (invoice._id === open_data._id) {
+  //             return {
+  //               ...invoice,
+  //               ...formatted_data,
+  //             };
+  //           } else {
+  //             return {
+  //               ...invoice,
+  //             };
+  //           }
+  //         })
+  //       );
+  //       handleClose();
+  //       message.success("Invoice Updated Successfully!");
+  //       setLoader(false)
+  //     }
+  //   })
+  //   .catch((err) => {
+  //     setLoader(false)
+  //     // console.log(err);
+  //     message.error(
+  //       `${
+  //         err?.response?.data?.msg
+  //           ? err?.response?.data?.msg
+  //           : err?.response?.data?.validation?.body?.message
+  //           ? err?.response?.data?.validation?.body?.message
+  //           : "Update Invoice Error"
+  //       }`
+  //     );
+  //   });
+  // }
+
+  const handleClose = () => {
+    setOpen({
+      isAddOpen: false,
+      isEditOpen: false,
+      isDelOpen: false,
+      data: "",
+    });
+    formedit.resetFields();
+    formadd.resetFields();
+  };
+
+  const onHandleDelete = (id) => {
+    setDeleteLoader(true);
+    apiServices("DELETE", "profit-loss", id, user_state)
+      .then((res) => {
+        if (res?.data?.success === true) {
+          getAllProfitLoss(filterValues, currentPage, pageSize);
+          let sel_year = graphData?.year;
+          getAllGraphData(sel_year);
+          handleClose();
+          message.success("Refreshing profit/loss data");
+          setDeleteLoader(false);
+        }
+      })
+      .catch((err) => {
+        setDeleteLoader(false);
+        // console.log(err);
+        message.error(
+          `${
+            err?.response?.data?.msg
+              ? err?.response?.data?.msg
+              : err?.response?.data?.validation?.body?.message
+              ? err?.response?.data?.validation?.body?.message
+              : "Delete Invoice Error"
+          }`
+        );
+      });
+
+    // console.log(id);
+    // message.success('Invoice Deleted Successfully!');
+    // handleClose()
+  };
+
+  const columns = [
+    {
+      title: "#",
+      dataIndex: "",
+      render: (text, record, index) => (currentPage - 1) * pageSize + index + 1,
+    },
+    {
+      title: t('finance.Profit&loss.month'),
+      dataIndex: "month",
+      render: (text, record) => {
+        const year = record?.year;
+        return <label>{moment(`${year}-${text}-01`, "YYYY-MM-DD").format("MMMM")}</label>;
+      },
+      sorter: (a, b) => parseFloat(a.month) - parseFloat(b.month),
+    },
+    {
+      title: t('finance.Profit&loss.year'),
+      dataIndex: "year",
+    },
+    {
+      title: t('finance.Profit&loss.payrolls'),
+      dataIndex: "creditedSalaryExpense",
+      render: (text, record) => {
+        const salaryExpense =
+          parseFloat(record?.creditedSalaryExpense) +
+          parseFloat(record?.salaryTaxExpense);
+        return (
+          <span>
+            {salaryExpense?.toFixed(2)?.toString()?.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}{" "}
+            {record?.companyId?.preferredCurrency}
+          </span>
+        );
+      },
+      sorter: (a, b) => parseFloat(a.creditedSalaryExpense) - parseFloat(b.creditedSalaryExpense),
+    },
+
+    {
+      title: t('finance.Profit&loss.expense'),
+      dataIndex: "generalExpense",
+      render: (text, record) => (
+        <span>
+          {text?.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}{" "}
+          {record?.companyId?.preferredCurrency}
+        </span>
+      ),
+      sorter: (a, b) => parseFloat(a.generalExpense) - parseFloat(b.generalExpense),
+    },
+    {
+      title: t('finance.Profit&loss.totalRevenue'),
+      dataIndex: "totalRevenue",
+      render: (text, record) => (
+        <span>
+          {text?.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}{" "}
+          {record?.companyId?.preferredCurrency}
+        </span>
+      ),
+      sorter: (a, b) => parseFloat(a.totalRevenue) - parseFloat(b.totalRevenue),
+    },
+    {
+      title: t('finance.Profit&loss.profitLoss'),
+      dataIndex: "profitLoss",
+      render: (text, record) => (
+        <label
+          className={
+            text >= 0 ? "badge bg-inverse-success" : "badge bg-inverse-danger"
+          }
+          style={{ fontSize: "13px" }}
+        >
+          {text?.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}{" "}
+          {record?.companyId?.preferredCurrency}
+        </label>
+      ),
+      sorter: (a, b) => parseFloat(a.profitLoss) - parseFloat(b.profitLoss),
+    },
+    {
+      title: t('holiday.actions'),
+      render: (text, record) => (
+        <div className="dropdown dropdown-action text-end">
+          <a
+            href="javascript:void(0)"
+            className="action-icon dropdown-toggle"
+            data-bs-toggle="dropdown"
+            aria-expanded="false"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <i className="material-icons">more_vert</i>
+          </a>
+          <div className="dropdown-menu dropdown-menu-right">
+            <Link
+              to="/profit-loss/view"
+              className="dropdown-item"
+              onClick={(e) => {
+                e.stopPropagation()
+                sessionStorage.setItem(`profit_loss`, "record")
+              }}
+              state={{ record: record }}
+            >
+              <i className="fa fa-eye m-r-5" /> {t('view')}
+            </Link>
+          </div>
+        </div>
+      ),
+    },
+  ];
+
+  const customEmptyText = (
+    <Empty
+      image={<img src={EmptyTable} />}
+      // image={<InboxOutlined />}
+      imageStyle={
+        {
+          // fontSize: 48,
+          // color: '#1890ff',
+        }
+      }
+      style={{
+        height: "300px",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+      }}
+      description={
+        <div style={{ display: "" }}>
+          <div
+            style={{
+              color: "#34343F",
+              fontWeight: "500",
+              fontSize: "14px",
+              margin: "7px 0px 4px 0px",
+            }}
+          >
+            {/* {
+                (role === 'admin' || permissions?.viewAllUsers) ? 'No Employee Record found!' : 'You are Restricted to View Employees'
+              } */}
+            {t('finance.Profit&loss.noRecordFound')}
+          </div>
+        </div>
+      }
+    />
+  );
+
+  const antIcon = (
+    <LoadingOutlined
+      style={{
+        fontSize: 24,
+        color: "#fff",
+      }}
+      spin
+    />
+  );
+
+  const amountFormatter = (value) => {
+    if (value >= 1e9) {
+      return `${(value / 1e9).toFixed(2)}B`;
+    } else if (value >= 1e6) {
+      return `${(value / 1e6).toFixed(2)}M`;
+    } else if (value >= 1e3) {
+      return `${(value / 1e3).toFixed(2)}K`;
+    } else if (value <= -1e9) {
+      return `${(value / 1e9).toFixed(2)}B`;
+    } else if (value <= -1e6) {
+      return `${(value / 1e6).toFixed(2)}M`;
+    } else if (value <= -1e3) {
+      return `${(value / 1e3).toFixed(2)}K`;
+    } else {
+      return value;
+    }
+  };
+
+  const disabledYear = (current) => {
+    if (!current) {
+      return false;
+    }
+    const currentYear = moment().year();
+  
+    return current.year() > currentYear;
+  };
+
+
+  const disabledMonth = (current) => {
+    const currentYear = moment().year();
+    // Check if the selected year is greater than or equal to the current year
+    if ( formadd.getFieldValue('year') && (formadd.getFieldValue('year')).year() >= currentYear) {
+        return current && current.year() === currentYear && current.month() > moment().month();
+    }
+  
+    // Allow all months if the selected year is before the current year
+    return false;
+};
+
+const handleYearChange = (year) => {
+  setGraphLoader(true);
+  getAllProfitLoss({ year }, 1, 20).then(() => {
+    getAllGraphData(year);
+  });
+};
+
+  return (
+    <>
+      <div className="page-wrapper">
+        <Helmet>
+          <title>{t('finance.Profit&loss.profitAndloss')} - {t('header.daftarPro')}</title>
+          <meta name="description" content="Login page" />
+        </Helmet>
+        {/* Page Content */}
+        <div className="content container-fluid">
+          {/* Page Header */}
+          <div className="page-header">
+            <div className="row">
+              <div className="col">
+                <h3 className="page-title">{t('finance.Profit&loss.profitAndloss')}</h3>
+                
+              </div>
+              <div className="col-auto float-end ms-auto">
+                {/* <a
+                  href="javascript:void(0)"
+                  className="btn add-btn"
+                  onClick={() => {
+                    setOpen({ isAddOpen: true, data: "" });
+                  }}
+                >
+                  <i className="fa fa-plus" /> {t('finance.Profit&loss.generateProfit&Loss')}
+                </a> */}
+                <Form form={formyear}>
+                  <div style={{ position: "relative", display:'flex', flexDirection:'row', alignItems:'baseline' }} id="area4">
+                    <label style={{fontSize:'large', marginRight:'5px', fontWeight:'bold'}}>Selected Year: </label>
+                    <Form.Item name="years" className="custom-border">
+                      <Select
+                        showSearch
+                        className="custom-select custom-normal"
+                        style={{
+                          width: "100%",
+                        }}
+                        size="large"
+                        getPopupContainer={() =>
+                          document.getElementById("area4")
+                        }
+                        onChange={handleYearChange} 
+                      >
+                        {allYears?.map((item, index) => {
+                          return (
+                            <Option key={index} value={item}>
+                              {item}
+                            </Option>
+                          );
+                        })}
+                      </Select>
+                    </Form.Item>
+                  </div>
+                </Form>
+              </div>
+            </div>
+          </div>
+          {/* /Page Header */}
+
+          {/* /Graphs */}
+          {graphLoader ? (
+            <Spin
+              style={{
+                height: "140px",
+                display: "grid",
+                placeItems: "center",
+                background: "#f3f3f3",
+                borderRadius: "10px",
+                marginBottom: "35px",
+              }}
+            />
+          ) : graphData?.year ? (
+            <div className="row">
+              <div className="col-md-12 text-center">
+                <div className="card">
+                  <div className="card-body" dir="ltr">
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: `${i18n.dir()==="rtl" ? "row-reverse" : "row"}`,
+                        justifyContent: "space-between",
+                        padding: "0px 20px",
+                      }}
+                    >
+                      <span style={{ color: "transparent" }}>.</span>
+                      <h3 className="card-title">
+                        {t('finance.Profit&loss.overview', {year: graphData?.year})}
+                      </h3>
+                      <div style={{ position: "relative" }} id="area4">
+                        <a
+                          href="javascript:void(0)"
+                          onClick={() => {
+                            getAllProfitLoss().then(() => {
+                              getAllGraphData();
+                            });
+                          }}
+                        >
+                          <i className="fa fa-refresh m-r-5" /> Refresh
+                        </a>
+                      </div>
+                    </div>
+
+                    {
+                      graphLoader ? (
+                        <Spin
+                          style={{
+                            height: "300px",
+                            display: "grid",
+                            placeItems: "center",
+                          }}
+                        />
+                      ) : (
+                        // allData?.expenses?.length > 0 ?
+                        <ResponsiveContainer width="100%" height={300}>
+                          <ComposedChart
+                            // data={graphData?.months}
+                            data={graphData?.months
+                              ?.map((item) => item)
+                              .sort((a, b) => +a.month - +b.month)}
+                            margin={{
+                              top: 5,
+                              right: 5,
+                              left: 5,
+                              bottom: 5,
+                            }}
+                            className="showLegend"
+                          >
+                            <CartesianGrid />
+                            <XAxis
+                              dataKey="month"
+                              tickFormatter={(value) =>
+                                moment(`${graphData?.year}-${value}-01`, "YYYY-MM-DD").format("MMM")
+                              }
+                            />
+                            <YAxis
+                              tickFormatter={(value) => {
+                                if (value >= 1e9) {
+                                  return `${(value / 1e9).toFixed(1)}B`;
+                                } else if (value >= 1e6) {
+                                  return `${(value / 1e6).toFixed(1)}M`;
+                                } else if (value >= 1e3) {
+                                  return `${(value / 1e3).toFixed(1)}K`;
+                                } else if (value <= -1e9) {
+                                  return `${(value / 1e9).toFixed(1)}B`;
+                                } else if (value <= -1e6) {
+                                  return `${(value / 1e6).toFixed(1)}M`;
+                                } else if (value <= -1e3) {
+                                  return `${(value / 1e3).toFixed(1)}K`;
+                                } else {
+                                  return value;
+                                }
+                              }}
+                            />
+                            {/* <Tooltip /> */}
+                            <Tooltip
+                              labelFormatter={(value) => (
+                                <>
+                                  {moment(value).format("MMMM")}{" "}
+                                  {graphData?.year}
+                                </>
+                              )}
+                              // formatter={(value) => <label>{value.toLocaleString()}</label>}
+                              formatter={(value, name, entry) => {
+                                if (
+                                  entry.dataKey === "totalRevenue"
+                                ) {
+                                  // return <label> {value.toLocaleString()}</label>;
+                                  return amountFormatter(value);
+                                } else if (entry.dataKey === "totalExpense") {
+                                  return amountFormatter(Math.abs(value));
+                                } else {
+                                  return (
+                                    <>
+                                      {value >= 0
+                                        ? `${t('finance.Profit&loss.profit')}    :    `
+                                        : `${t('finance.Profit&loss.Loss')}     :    `}{" "}
+                                      {`\u200E${amountFormatter(value)}\u200E`}
+                                    </>
+                                  );
+                                }
+                              }}
+                              contentStyle={{ direction: i18n.dir() }}
+                            />
+                            <Legend
+                              formatter={(value, entry) => {
+                                if (entry.dataKey === "totalExpense") {
+                                  return <label>{t('finance.Profit&loss.totalExpense')}</label>;
+                                } else if (entry.dataKey === "totalRevenue") {
+                                  return <label>{t('finance.Profit&loss.totalRevenue')}</label>;
+                                } else {
+                                  return t('finance.Profit&loss.profitLoss');
+                                }
+                              }}
+                            />
+                            <Bar
+                              dataKey="totalExpense"
+                              name={t('finance.Profit&loss.totalExpense')}
+                              fill="#fc6075"
+                              barSize={20}
+                              minPointSize={1}
+                            />
+                            <Bar
+                              dataKey="totalRevenue"
+                              name={t('finance.Profit&loss.totalRevenue')}
+                              fill="limegreen"
+                              barSize={20}
+                              minPointSize={1}
+                            />
+                            <Line
+                              type="monotone"
+                              dataKey="profitLoss"
+                              name={(val) => (val >= 0 ? t('finance.Profit&loss.profit') : t('finance.Profit&loss.Loss'))}
+                              stroke="#ff7300"
+                              fill="#ff7300"
+                              strokeWidth={2}
+                              dot={{ r: 3 }}
+                              activeDot={{ r: 7 }}
+                            />
+                            {/* <Line type="monotone" dataKey="profitLoss" name='Profit Loss' stroke="#ff9b44" fill="#00c5fb" strokeWidth={3} dot={{ r: 3 }} activeDot={{ r: 7 }} /> */}
+                          </ComposedChart>
+                        </ResponsiveContainer>
+                      )
+                      // :
+                      // <label style={{height: '300px', display: 'grid', placeItems: 'center', color: 'grey'}}>No Record Found!</label>
+                    }
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
+          {/* /Graphs */}
+
+          {/* /Search Filter */}
+          {/* <Form form={form} onFinish={onFilterFinish}>
+            <div className="row filter-row">
+              <div className="col-sm-6 col-md-4">
+                <div
+                  className="filterDateMonth"
+                  style={{ position: "relative" }}
+                  id="area"
+                >
+                  <Form.Item
+                    name="month"
+                    className="custom-border"
+                    // rules={[
+                    //   {
+                    //     whitespace: true,
+                    //     required: true,
+                    //     message: "please select month",
+                    //   },
+                    // ]}
+                  >
+                    <DatePicker
+                      format="MMMM"
+                      allowClear={false}
+                      size="large"
+                      picker="month"
+                      placeholder={t('finance.Profit&loss.selectMonth')}
+                      className="form-control filterDate"
+                      style={{ minHeight: "50px", display: "flex" }}
+                      getPopupContainer={() => document.getElementById("area")}
+                    />
+                  </Form.Item>
+                </div>
+              </div>
+              <div className="col-sm-6 col-md-4">
+                <div style={{ position: "relative" }} id="area1">
+                  <Form.Item
+                    name="year"
+                    className="custom-border"
+                    // rules={[
+                    //   {
+                    //     whitespace: true,
+                    //     required: true,
+                    //     message: "please select year",
+                    //   },
+                    // ]}
+                  >
+                    <DatePicker
+                      allowClear={false}
+                      size="large"
+                      picker="year"
+                      placeholder={t('finance.Profit&loss.selectYear')}
+                      className="form-control filterDate"
+                      style={{ minHeight: "50px", display: "flex" }}
+                      getPopupContainer={() => document.getElementById("area1")}
+                    />
+                  </Form.Item>
+                </div>
+              </div>
+              <div
+                className="col-sm-6 col-md-4"
+                style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: "13px",
+                }}
+              >
+                <button
+                  href="javascript:void(0)"
+                  type="submit"
+                  className="btn btn-success btn-block w-50"
+                >
+                  {" "}
+                  {t('search')}{" "}
+                </button>
+                <button
+                  href="javascript:void(0)"
+                  type="reset"
+                  onClick={() => {
+                    form.resetFields();
+                    getAllProfitLoss("", 1, pageSize);
+                    setFilterValues(null);
+                    setCurrentPage(1);
+                  }}
+                  className="btn btn-success btn-block w-50"
+                  style={{
+                    backgroundColor: "#616161",
+                    color: "white",
+                    borderColor: "#aeaeae",
+                  }}
+                >
+                  {t('reset')}
+                </button>
+              </div>
+            </div>
+          </Form> */}
+          {/* /Search Filter */}
+          <div className="row">
+            <div className="col-md-12">
+              <div className="table-responsive profitLossTable">
+                <Table
+                  loading={tableLoader}
+                  className={allProfitLoss?.length > 0 ? "table-striped" : ""}
+                  locale={{
+                    emptyText: tableLoader ? null : customEmptyText,
+                  }}
+                  pagination={false}
+                  style={{ overflowX: "auto", paddingBottom: "70px" }}
+                  columns={columns}
+                  // bordered
+                  dataSource={allProfitLoss}
+                  rowKey={(record) => record._id}
+                  // onChange={this.handleTableChange}
+                  components={i18n.dir()==="rtl" ?
+                      {
+                      header: {
+                        cell: ({ children }) => <th style={{ textAlign: 'right' }}>{children}</th>,
+                      },
+                    } :
+                    null
+                    }
+                    onRow={(record, rowIndex) => ({
+                      onClick: () => {
+                        console.log("first",record)
+                        sessionStorage.setItem(`profit_loss`, "record")
+                        nav('/profit-loss/view', { state: record })
+                      },
+                      style: { cursor: 'pointer' },
+                      ...(i18n.dir() === "rtl" && {
+                        style: { textAlign: 'right' }, // Align table data to the right
+                      }),
+                    })}
+                />
+
+                {/* {allProfitLoss?.length > 0 && (
+                  <div>
+                    <Pagination
+                      style={{ display: "flex", float: "right" }}
+                      total={paginationDetail?.total}
+                      pageSize={pageSize}
+                      defaultCurrent={1}
+                      current={currentPage}
+                      showTotal={(total, range) =>
+                        t('paginationShow', { range1: range[0], range2: range[1], total: total })}
+
+                      onChange={(page, size) => {
+                        setPageSize(size);
+                        setCurrentPage(page);
+                        getAllProfitLoss(filterValues, page, size);
+                      }}
+                      showSizeChanger={true}
+                      pageSizeOptions={["20", "30", "40", "50"]}
+                      itemRender={(current, type, originalElement) =>
+                        itemRender(current, type, originalElement, t)
+                      }
+                    />
+                  </div>
+                )} */}
+              </div>
+            </div>
+          </div>
+        </div>
+        {/* /Page Content */}
+      </div>
+      {/* Add modall */}
+      <Modal
+        open={open.isAddOpen}
+        onClose={handleClose}
+        aria-labelledby="modal-modal-title"
+        aria-describedby="modal-modal-description"
+        disableRestoreFocus
+        BackdropProps={{
+          style: { backgroundColor: "rgb(0 0 0 / 87%)" }, // Set the backdrop color here
+        }}
+      >
+        <div className="modal-dialog modal-dialog-centered" role="document">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h5 className="modal-title">{t('finance.Profit&loss.generateProfit&Loss')}</h5>
+              <button type="button" className="close" onClick={handleClose}>
+                <span aria-hidden="true">×</span>
+              </button>
+            </div>
+            <div className="modal-body">
+              <Form
+                form={formadd}
+                name="control-hooks"
+                onFinish={onFinishAdd}
+                onFinishFailed={({ errorFields }) => {
+                  const consecutiveSpacesError = errorFields.find((field) =>
+                    field.errors.toString().includes("consecutive spaces")
+                  );
+                  if(consecutiveSpacesError){
+                    message.error(t('allEmp.errors.removeConsecutiveSpaces'))
+                 }else{
+                    message.error(t('allEmp.errors.fillRequiredFields'))
+                  } 
+                }}
+              >
+                <div className="row">
+                  <div className="col-sm-6">
+                    <div className="form-group">
+                      <label>
+                      {t('finance.Profit&loss.month')} <span className="text-danger">*</span>
+                      </label>
+                      <div
+                        className="filterDateMonth disableAlign"
+                        style={{ position: "relative" }}
+                        id="area2"
+                      >
+                        <Form.Item
+                          name="month"
+                          className="custom-border"
+                          rules={[
+                            {
+                              required: true,
+                              message: t('finance.Profit&loss.pleaseSelectMonth'),
+                            },
+                            {
+                              validator: (_, value) => {
+                                const selectedYear = formadd.getFieldValue('year');
+                                const currentYear = moment().year();
+                                const currentMonth = moment().month();
+                        
+                                if (selectedYear && selectedYear.year() >= currentYear && value && value.month() > currentMonth) {
+                                  return Promise.reject(t('finance.Profit&loss.cannotSelectFutureMonth'));
+                                }
+                        
+                                return Promise.resolve();
+                              },
+                            },
+                          ]}
+                        >
+                          <DatePicker.MonthPicker
+                            disabledDate={disabledMonth}
+                            format="MMMM"
+                            //allowClear={false}
+                            size="large"
+                            placeholder={t('finance.Profit&loss.selectMonth')}
+                            className="form-control filterDate"
+                            style={{ minHeight: "50px", display: "flex" }}
+                            getPopupContainer={() =>
+                              document.getElementById("area2")
+                            }
+                          />
+                        </Form.Item>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="col-sm-6">
+                    <div className="form-group">
+                      <label>
+                      {t('finance.Profit&loss.year')} <span className="text-danger">*</span>
+                      </label>
+                      <div
+                        className="disableAlign"
+                        style={{ position: "relative" }}
+                        id="area3"
+                      >
+                        <Form.Item
+                          name="year"
+                          className="custom-border"
+                          rules={[
+                            {
+                              required: true,
+                              message: t('finance.Profit&loss.pleaseSelectYear'),
+                            },
+                          ]}
+                        >
+                          <DatePicker.YearPicker
+                            disabledDate={disabledYear}
+                            //allowClear={false}
+                            size="large"
+                            placeholder={t('finance.Profit&loss.selectYear')}
+                            className="form-control filterDate"
+                            style={{ minHeight: "50px", display: "flex" }}
+                            getPopupContainer={() =>
+                              document.getElementById("area3")
+                            }
+                          />
+                        </Form.Item>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="submit-section">
+                    <Form.Item>
+                      <Button
+                        htmlType="submit"
+                        className="btn btn-primary submit-btn"
+                        disabled={loader}
+                      >
+                        {loader ? (
+                          <Spin size="small" indicator={antIcon} />
+                        ) : (
+                          t('submit')
+                        )}
+                      </Button>
+                    </Form.Item>
+                  </div>
+                </div>
+              </Form>
+            </div>
+          </div>
+        </div>
+      </Modal>
+      {/* Add modall */}
+
+      {/* delete modall */}
+      <Modal
+        open={open.isDelOpen}
+        onClose={handleClose}
+        aria-labelledby="modal-modal-title"
+        aria-describedby="modal-modal-description"
+        disableRestoreFocus
+        BackdropProps={{
+          style: { backgroundColor: "rgb(0 0 0 / 87%)" }, // Set the backdrop color here
+        }}
+      >
+        <div className="modal-dialog modal-dialog-centered">
+          <div className="modal-content" style={{ height: "280px" }}>
+            <div
+              className="modal-body"
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "center",
+              }}
+            >
+              <div className="form-header">
+                <h3 style={{ marginBottom: "30px" }}>{t('finance.Profit&loss.deleteProfitLoss')}</h3>
+                <p>
+                  <br />{" "}
+                  <span dangerouslySetInnerHTML={{ __html: t('finance.Profit&loss.deletemsg', { project: `${moment(open?.data?.month).format("MMMM")} ${open?.data?.year}` }) }} />
+                </p>
+              </div>
+              <div className="modal-btn delete-action">
+                <div className="row">
+                  <div className="col-6">
+                    <Button
+                      htmlType="submit"
+                      className="btn btn-primary continue-btn"
+                      onClick={() => onHandleDelete(open?.data?._id)}
+                      disabled={deleteLoader}
+                      style={{ width: "100%" }}
+                    >
+                      {deleteLoader ? (
+                        <Spin size="small" indicator={antIcon} />
+                      ) : (
+                        t('delete')
+                      )}
+                    </Button>
+                  </div>
+                  <div className="col-6">
+                    <Button
+                      onClick={handleClose}
+                      className="btn btn-primary submit-btn"
+                      style={{ width: "100%" }}
+                    >
+                      {t('cancel')}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Modal>
+      {/* delete modall */}
+      {/* <Offcanvas/> */}
+    </>
+  );
+};
+
+export default ProfitLoss;
