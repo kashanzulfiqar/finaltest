@@ -47,11 +47,11 @@ jobs:
           echo "### 🌐 Staging Deployment Live!" >> $GITHUB_STEP_SUMMARY
           echo "**URL:** [$SITE_URL]($SITE_URL)" >> $GITHUB_STEP_SUMMARY
 
-     # --- 2. Build & Deploy Staging Frontend (S3 + CloudFront Invalidation) ---
+           # --- 2. Build & Deploy Staging Frontend (S3 + CloudFront Invalidation) ---
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '22'
           cache: 'yarn'
           cache-dependency-path: 'frontend/yarn.lock'
       
@@ -62,7 +62,7 @@ jobs:
       - name: Create .env file
         working-directory: frontend
         run: |
-          cat << 'EOF' >> .env
+          cat << 'EOF' > .env
           REACT_APP_STRIPE_PUBLISHABLE_KEY=${{ secrets.REACT_APP_STRIPE_PUBLISHABLE_KEY }}
           VAPID_PUBLIC_KEY=${{ secrets.VAPID_PUBLIC_KEY }}
           NODE_ENV=${{ secrets.NODE_ENV }}
@@ -80,8 +80,7 @@ jobs:
       
       - name: Invalidate CloudFront
         run: aws cloudfront create-invalidation --distribution-id ${{ env.STAGING_CF_ID }} --paths "/*"
-           
-          
+                
           # Force CloudFront Cache Invalidation
          
       # --- 3. Deploy Staging Backend (EC2) ---
