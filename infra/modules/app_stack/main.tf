@@ -1,3 +1,12 @@
+# --- 0. Data Sources for AWS Managed CloudFront Policies ---
+data "aws_cloudfront_cache_policy" "caching_disabled" {
+  name = "Managed-CachingDisabled"
+}
+
+data "aws_cloudfront_origin_request_policy" "all_viewer_except_host" {
+  name = "Managed-AllViewerExceptHostHeader"
+}
+
 # --- 1. S3 Bucket for Static Frontend ---
 resource "aws_s3_bucket" "frontend" {
   bucket        = "kashan-my-app-frontend-${var.environment}"
@@ -39,7 +48,7 @@ resource "aws_cloudfront_distribution" "cdn" {
 
   # HTTPS Backend Origin
   origin {
-    domain_name = "stage-api.daftarpro.com"
+    domain_name = var.backend_domain_name
     origin_id   = "Backend-API"
 
     custom_origin_config {
@@ -50,7 +59,7 @@ resource "aws_cloudfront_distribution" "cdn" {
     }
   }
 
-  # API Cache Behavior
+  # API Cache Behavior (/api/*)
   ordered_cache_behavior {
     path_pattern     = "/api/*"
     target_origin_id = "Backend-API"
@@ -60,12 +69,11 @@ resource "aws_cloudfront_distribution" "cdn" {
 
     viewer_protocol_policy = "redirect-to-https"
 
-    # AWS Managed CachingDisabled Policy ID
-    cache_policy_id = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
+    # Managed CachingDisabled Policy
+    cache_policy_id = data.aws_cloudfront_cache_policy.caching_disabled.id
 
-    # AWS Managed AllViewerExceptHostHeader Policy ID
-    # Forwards headers/query params/cookies while setting Host header to stage-api.daftarpro.com
-    origin_request_policy_id = "b6805402-2213-4780-8307-3b32b4fe742d" 
+    # Managed AllViewerExceptHostHeader Policy
+    origin_request_policy_id = data.aws_cloudfront_origin_request_policy.all_viewer_except_host.id
   }
 
   # Frontend Default Cache Behavior
@@ -184,6 +192,7 @@ resource "aws_eip" "backend_eip" {
   }
 }
 
+# --- 6. CloudFront Cache Invalidation Trigger ---
 resource "terraform_data" "invalidate_cache" {
   triggers_replace = [
     aws_cloudfront_distribution.cdn.id
