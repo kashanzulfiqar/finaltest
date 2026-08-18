@@ -66,6 +66,7 @@ jobs:
           REACT_APP_STRIPE_PUBLISHABLE_KEY=${{ secrets.REACT_APP_STRIPE_PUBLISHABLE_KEY }}
           VAPID_PUBLIC_KEY=${{ secrets.VAPID_PUBLIC_KEY }}
           NODE_ENV=${{ secrets.NODE_ENV }}
+          REACT_APP_API_URL=&{{secrets.REACT_APP_API_URL}}
           EOF
       
       - name: Build frontend production bundle
