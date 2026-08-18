@@ -57,7 +57,7 @@ jobs:
       
       - name: Install dependencies
         working-directory: frontend
-        run: yarn install --frozen-lockfile
+        run: yarn install --frozen-lockfile --ignore-engines
       
       - name: Create .env file
         working-directory: frontend
